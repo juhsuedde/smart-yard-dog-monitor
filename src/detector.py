@@ -1,15 +1,15 @@
 from ultralytics import YOLO
+import numpy as np
+
 
 class DogDetector:
-    def __init__(self, model_path: str = "yolov8n.pt"):
+    def __init__(self, model_path: str = "yolov8n.pt", confidence_threshold: float = 0.4):
         self.model = YOLO(model_path)
+        self.confidence_threshold = confidence_threshold
 
-    def detect_dogs(self, frame):
-        """
-        Retorna lista de bounding boxes de cachorros detectados
-        Cada box = (x1, y1, x2, y2)
-        """
-        dogs = []
+        self.DOG_CLASS_ID = 16
+
+    def detect(self, frame) -> bool:
         results = self.model(frame, verbose=False)
 
         for result in results:
@@ -17,27 +17,10 @@ class DogDetector:
                 continue
 
             for box in result.boxes:
-                class_id = int(box.cls[0])
-                class_name = self.model.names[class_id]
+                cls_id = int(box.cls[0])
+                conf = float(box.conf[0])
 
-                if class_name == "dog":
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    dogs.append((x1, y1, x2, y2))
+                if cls_id == self.DOG_CLASS_ID and conf >= self.confidence_threshold:
+                    return True
 
-        return dogs
-
-
-def box_intersects_roi(box, roi):
-    """
-    box = (x1, y1, x2, y2)
-    roi = (rx1, ry1, rx2, ry2)
-    """
-    x1, y1, x2, y2 = box
-    rx1, ry1, rx2, ry2 = roi
-
-    return not (
-        x2 < rx1 or
-        x1 > rx2 or
-        y2 < ry1 or
-        y1 > ry2
-    )
+        return False

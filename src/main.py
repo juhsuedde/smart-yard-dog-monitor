@@ -1,77 +1,67 @@
 import cv2
 import time
-from detector import DogDetector, box_intersects_roi
 
-ROI = (400, 200, 900, 600)
-ALERT_COOLDOWN_SECONDS = 5
+from core.video_source import FileVideoSource, WebcamVideoSource
+from detector import DogDetector
+from services.telegram_notifier import TelegramNotifier
+
+USE_WEBCAM = False
+VIDEO_PATH = "tests/sample.mp4"   # usado se USE_WEBCAM = False
+WEBCAM_INDEX = 0
+
+DETECTION_INTERVAL_SECONDS = 10 
 
 def main():
-    cap = cv2.VideoCapture(0)
+    print("🚀 Iniciando Smart Yard Dog Monitor")
 
-    if not cap.isOpened():
-        print("❌ Não foi possível abrir a câmera")
-        return
+    if USE_WEBCAM:
+        video = WebcamVideoSource(index=WEBCAM_INDEX)
+        print("📷 Usando webcam")
+    else:
+        video = FileVideoSource(VIDEO_PATH)
+        print(f"🎞️ Usando vídeo: {VIDEO_PATH}")
 
-    detector = DogDetector()
-    last_alert_time = 0
+    video.open()
+    print("✅ Fonte de vídeo aberta")
 
-    print("🎥 Monitorando área com cooldown — pressione 'q' para sair")
+    detector = DogDetector(model_path="yolov8n.pt")
+    print("🧠 Detector carregado")
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            print("❌ Falha ao capturar frame")
-            break
+    notifier = TelegramNotifier()
+    print("📨 Notificador Telegram pronto")
 
-        current_time = time.time()
-        dogs = detector.detect_dogs(frame)
+    last_notification_time = 0
 
-        rx1, ry1, rx2, ry2 = ROI
-        cv2.rectangle(frame, (rx1, ry1), (rx2, ry2), (255, 0, 0), 2)
-        cv2.putText(
-            frame,
-            "AREA MONITORADA",
-            (rx1, ry1 - 10),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.6,
-            (255, 0, 0),
-            2
-        )
+    try:
+        while True:
+            ret, frame = video.read()
 
-        for (x1, y1, x2, y2) in dogs:
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(
-                frame,
-                "DOG",
-                (x1, y1 - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                (0, 255, 0),
-                2
-            )
+            if not ret or frame is None:
+                print("⚠️ Fim do vídeo ou frame inválido")
+                break
 
-            if box_intersects_roi((x1, y1, x2, y2), ROI):
-                cv2.putText(
-                    frame,
-                    "⚠️ DOG NA AREA!",
-                    (50, 50),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    1,
-                    (0, 0, 255),
-                    3
-                )
+            detected = detector.detect(frame)
 
-                if current_time - last_alert_time >= ALERT_COOLDOWN_SECONDS:
-                    print("⚠️ ALERTA: cachorro dentro da área monitorada")
-                    last_alert_time = current_time
+            if detected:
+                now = time.time()
+                if now - last_notification_time >= DETECTION_INTERVAL_SECONDS:
+                    print("🐶 Cachorro detectado! Enviando alerta...")
+                    notifier.send_alert(frame=frame)
+                    last_notification_time = now
 
-        cv2.imshow("Smart Yard Dog Monitor", frame)
+            cv2.imshow("Smart Yard Dog Monitor", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                print("🛑 Encerrado pelo usuário")
+                break
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+    except KeyboardInterrupt:
+        print("🛑 Interrompido pelo usuário")
 
-    cap.release()
-    cv2.destroyAllWindows()
+    finally:
+        video.release()
+        cv2.destroyAllWindows()
+        print("🧹 Recursos liberados. Finalizado.")
+
 
 if __name__ == "__main__":
     main()
