@@ -98,19 +98,16 @@ class TelegramNotifier:
     
     def send_detection_alert(self, frame, roi_name: str = "quintal") -> bool:
         """Método específico para alerta de detecção com foto."""
-        # Adiciona overlay no frame
+        # Adiciona apenas o timestamp no frame, sem banner vermelho
         alert_frame = frame.copy()
         h, w = alert_frame.shape[:2]
         
-        # Banner vermelho no topo
-        cv2.rectangle(alert_frame, (0, 0), (w, 60), (0, 0, 255), -1)
-        cv2.putText(alert_frame, "🐶 CACHORRO DETECTADO", (10, 40), 
-                   cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
-        
-        # Timestamp
+        # Timestamp discreto no canto inferior
         timestamp = datetime.now().strftime("%H:%M:%S - %d/%m/%Y")
         cv2.putText(alert_frame, timestamp, (10, h - 20), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
         
-        caption = f"Alerta do monitor: {roi_name}"
+        # Legenda simples sem emojis estranhos
+        caption = f"O cachorro foi detectado na área monitorada."
+        
         return self.send_frame(alert_frame, caption)
