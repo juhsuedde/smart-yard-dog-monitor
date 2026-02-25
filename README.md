@@ -1,44 +1,55 @@
-# Smart Yard Dog Monitor 🐶
+# smart-yard-dog-monitor
 
-Projeto de visão computacional desenvolvido em Python para **monitorar uma área específica de um ambiente** e **alertar quando um cachorro entra nessa área**, utilizando detecção por IA em tempo real.
+Esse projeto usa visão computacional para detectar cães em uma área definida de vídeo e disparar alertas de forma controlada.
 
-A ideia surgiu a partir de uma necessidade real de **segurança**, mas o sistema foi pensado de forma **genérica**, podendo ser adaptado para qualquer área monitorada.
+## Por que fiz esse projeto?
 
----
+Queria explorar visão computacional em um caso prático: monitorar uma área usando câmera e detectar especificamente quando um cachorro entra nessa zona.  
+Foi uma forma de aprender como integrar modelos de detecção de objetos (YOLOv8) com lógica de alerta e evitar notificações repetidas.
 
-## 🎯 Objetivo do projeto
+## O que ele faz hoje
 
-Detectar a presença de um cachorro em uma região delimitada do vídeo e gerar um alerta **sem spam**, mesmo que o animal permaneça no local por um período prolongado.
+- Captura frames de uma fonte de vídeo (como webcam ou stream)
+- Usa um modelo YOLOv8 para detectar apenas a classe **“dog”**
+- Monitora uma região de interesse (ROI) definida no vídeo
+- Dispara um alerta sempre que um cachorro entra na ROI
+- Evita alertas repetidos com um sistema de cooldown
 
-O foco do projeto é:
+## Como funciona
 
-- Arquitetura clara
-- Código legível
-- Boas práticas
-- Aplicação prática de Inteligência Artificial
+O código está organizado com base nas principais responsabilidades:
 
----
+1. **Captura de vídeo:** o loop principal lê os frames continuamente.
+2. **Detecção de objeto:** o modelo YOLOv8 analisa cada frame e identifica cães.
+3. **Região de interesse (ROI):** você pode delimitar no código a área que importa monitorar.
+4. **Alertas com cooldown:** quando o cachorro entra na ROI, um alerta é enviado; se ele permanecer lá, o cooldown impede notificações constantes.
 
-## 🧠 Como funciona
+## Estrutura do projeto
 
-1. O sistema captura frames de uma fonte de vídeo (webcam ou stream).
-2. Um modelo **YOLOv8** é usado para detectar apenas a classe **dog**.
-3. Uma **região de interesse (ROI)** é definida no frame.
-4. Caso o cachorro entre nessa área:
-   - Um alerta é disparado
-   - Um **cooldown** evita notificações repetidas
-5. O sistema continua monitorando em tempo real.
+- `src/detector.py`: lógica que usa o modelo de detecção
+- `src/main.py`: loop principal que captura o vídeo e aplica a detecção
+- `src/test_video_source.py`: utilitário para testar a fonte de vídeo
+- `tests/`: testes automatizados (se houver)
+- `.env.example`: exemplo de variáveis de ambiente para configuração
 
----
+## O que ainda quero melhorar
 
-## 🧱 Estrutura do projeto
+- Tornar mais configurável (ROI via interface ou arquivo de configuração)
+- Adicionar notificações mais visuais ou via serviço externo
+- Estruturar testes automáticos mais abrangentes
 
-```text
-src/
- ├── detector.py          Lógica de detecção com YOLO
- ├── main.py              Loop principal + ROI + cooldown
- ├── test_video_source.py Teste isolado da fonte de vídeo
-tests/
-architecture.md           Documentação da arquitetura
-.env.example              Exemplo de variáveis de ambiente
+## Tecnologias usadas
+
+- Python
+- YOLOv8 (detecção de objetos)
+- OpenCV (captura e processamento de vídeo)
+
+## Como testar
+
+1. Configure a fonte de vídeo (webcam ou stream)
+2. Ajuste a ROI se necessário
+3. Execute o projeto com Python
+
+```bash
+python src/main.py
 ```

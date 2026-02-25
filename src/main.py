@@ -1,36 +1,33 @@
 import cv2
-import time
 
-from core.video_source import FileVideoSource, WebcamVideoSource
-from detector import DogDetector
-from services.telegram_notifier import TelegramNotifier
+from src.video.video_source import FileVideoSource
+from src.detection.dog_detector import DogDetector
+from src.notification.telegram_notifier import TelegramNotifier
+from src.detection.roi import ROI
 
-USE_WEBCAM = False
-VIDEO_PATH = "tests/sample.mp4"   # usado se USE_WEBCAM = False
-WEBCAM_INDEX = 0
-
-DETECTION_INTERVAL_SECONDS = 10 
 
 def main():
     print("🚀 Iniciando Smart Yard Dog Monitor")
 
-    if USE_WEBCAM:
-        video = WebcamVideoSource(index=WEBCAM_INDEX)
-        print("📷 Usando webcam")
-    else:
-        video = FileVideoSource(VIDEO_PATH)
-        print(f"🎞️ Usando vídeo: {VIDEO_PATH}")
+    video_path = "tests/sample.mp4"
+    print(f"🎞️ Usando vídeo: {video_path}")
 
+    # Fonte de vídeo
+    video = FileVideoSource(video_path)
     video.open()
     print("✅ Fonte de vídeo aberta")
 
-    detector = DogDetector(model_path="yolov8n.pt")
+    # ROI (opção B – fixa)
+    roi = ROI(x=200, y=150, w=800, h=400)
+    print("📐 ROI configurada")
+
+    # Detector
+    detector = DogDetector()
     print("🧠 Detector carregado")
 
+    # Notificador
     notifier = TelegramNotifier()
     print("📨 Notificador Telegram pronto")
-
-    last_notification_time = 0
 
     try:
         while True:
@@ -40,22 +37,21 @@ def main():
                 print("⚠️ Fim do vídeo ou frame inválido")
                 break
 
-            detected = detector.detect(frame)
+            # Aplica ROI
+            frame_roi = roi.apply(frame)
+
+            # Detecção
+            detected = detector.detect(frame_roi)
 
             if detected:
-                now = time.time()
-                if now - last_notification_time >= DETECTION_INTERVAL_SECONDS:
-                    print("🐶 Cachorro detectado! Enviando alerta...")
-                    notifier.send_alert(frame=frame)
-                    last_notification_time = now
+                print("🐶 Cachorro detectado! Enviando alerta...")
+                notifier.send("🐶 Cachorro detectado no quintal!")
+                break  # evita spam em vídeo de teste
 
-            cv2.imshow("Smart Yard Dog Monitor", frame)
+            # (opcional) visualizar
+            cv2.imshow("Smart Yard Monitor", frame_roi)
             if cv2.waitKey(1) & 0xFF == ord("q"):
-                print("🛑 Encerrado pelo usuário")
                 break
-
-    except KeyboardInterrupt:
-        print("🛑 Interrompido pelo usuário")
 
     finally:
         video.release()
